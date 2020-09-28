@@ -59,7 +59,6 @@ class Board extends React.Component<BoardProperties> {
 }
 
 class GameState {
-    static readonly adjacentRequiredForWin: number = 3;
     history: Array<BoardRepresentation> = [new BoardRepresentation()];
     xIsNext: boolean = true;
     winner: string | null = null;
@@ -155,61 +154,80 @@ ReactDOM.render(
     document.getElementById('root')
 );
 
+class WinConditionPattern {
+    readonly height: number;
+    readonly width: number;
+    private pattern: Array<boolean>;
 
+    constructor(pattern: Array<string>) {
+        this.height = pattern.length;
+        this.width = pattern[0].length;
+        this.pattern = Array<boolean>(this.height * this.width).fill(false);
+        for (let y = 0; y < this.height; ++y) {
+            for (let x = 0; x < this.width; ++x) {
+                const index = y * this.width + x;
+                this.pattern[index] = (pattern[y][x] === '*');
+            }
+        }
+    }
+
+    checkPattern(squares: Array<string | null>, row: number, col: number): string | null {
+        const boardLength = BoardRepresentation.boardLength;
+        if (row + this.height > boardLength || col + this.width > boardLength) {
+            return null;
+        }
+        let entry: string | null = null;
+        for (let y = 0; y < this.height; ++y) {
+            for (let x = 0; x < this.width; ++x) {
+                const patternIndex = y * this.width + x;
+                const boardIndex = (y + row) * boardLength + x + col;
+                if (this.pattern[patternIndex]) {
+                    if (!squares[boardIndex]) {
+                        return null;
+                    }
+                    if (!entry) {
+                        entry = squares[boardIndex];
+                    }
+                    if (entry !== squares[boardIndex]) {
+                        return null;
+                    }
+                }
+            }
+        }
+        return entry;
+    }
+}
+
+const winConditionParrerns: Array<WinConditionPattern> = [
+    new WinConditionPattern([
+        "***"
+    ]),
+    new WinConditionPattern([
+        "*",
+        "*",
+        "*"
+    ]),
+    new WinConditionPattern([
+        "*00",
+        "0*0",
+        "00*"
+    ]),
+    new WinConditionPattern([
+        "00*",
+        "0*0",
+        "*00"
+    ])
+];
 
 function calculateWinner(squares: Array<string | null>): string | null {
     const boardLength = BoardRepresentation.boardLength;
-    const rows = numRange(0, boardLength)
-        .map((i) =>
-            numRange(
-                i * boardLength,
-                (i + 1) * boardLength
-            )
-        );
-    const cols = numRange(0, boardLength)
-        .map((i) =>
-            numRange(
-                i,
-                i + (boardLength - 1) * boardLength + 1,
-                boardLength
-            )
-        );
-    // diagonals top right to bottom left
-    const diagStart1 = cols[boardLength - 1].reverse().concat(rows[0].reverse().slice(1));
-    // diagonals top left to bottom right
-    const diagStart2 = cols[0].reverse().concat(rows[0].slice(1));
-    const diagLengths = numRange(1, boardLength + 1).concat(numRange(1, boardLength).reverse());
-    const diags1 = diagLengths
-        .map((length, index) =>
-            numRange(
-                diagStart1[index],
-                diagStart1[index] + length * (boardLength - 1),
-                boardLength - 1)
-        );
-    const diags2 = diagLengths
-        .map((length, index) =>
-            numRange(
-                diagStart2[index],
-                diagStart2[index] + length * (BoardRepresentation.boardLength + 1),
-                BoardRepresentation.boardLength + 1)
-        );
-    const lines = rows.concat(cols, diags1, diags2);
-    for (const line of lines) {
-        if (line.length < GameState.adjacentRequiredForWin) {
-            continue;
-        }
-        let current: string | null = null;
-        let counter: number = 0;
-        for (let i of line) {
-            if (squares[i] && squares[i] === current) {
-                ++counter;
-            }
-            else {
-                counter = 1;
-                current = squares[i];
-            }
-            if (counter === GameState.adjacentRequiredForWin) {
-                return squares[i];
+    for (let pattern of winConditionParrerns) {
+        for (let row = 0; row <= (boardLength - pattern.height); ++row) {
+            for (let col = 0; col <= (boardLength - pattern.width); ++col) {
+                let checkResult = pattern.checkPattern(squares, row, col);
+                if (checkResult) {
+                    return checkResult;
+                }
             }
         }
     }
