@@ -96,6 +96,9 @@ class Game extends React.Component {
         if (winner) {
             status += 'Winner: ' + winner;
         }
+        else if (stepNumber === squares.length) {
+            status += 'Tie'
+        }
         else {
             status += 'Next player: ' + (this.state.xIsNext ? 'X' : 'O');
         }
