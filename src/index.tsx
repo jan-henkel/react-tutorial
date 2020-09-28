@@ -154,21 +154,62 @@ ReactDOM.render(
     document.getElementById('root')
 );
 
-function calculateWinner(squares: Array<string | null>) {
-    const lines = [
-        [0, 1, 2],
-        [3, 4, 5],
-        [6, 7, 8],
-        [0, 3, 6],
-        [1, 4, 7],
-        [2, 5, 8],
-        [0, 4, 8],
-        [2, 4, 6],
-    ];
-    for (let i = 0; i < lines.length; i++) {
-        const [a, b, c] = lines[i];
-        if (squares[a] && squares[a] === squares[b] && squares[a] === squares[c]) {
-            return squares[a];
+
+
+function calculateWinner(squares: Array<string | null>): string | null {
+    const boardLength = BoardRepresentation.boardLength;
+    const rows = numRange(0, boardLength)
+        .map((i) =>
+            numRange(
+                i * boardLength,
+                (i + 1) * boardLength
+            )
+        );
+    const cols = numRange(0, boardLength)
+        .map((i) =>
+            numRange(
+                i,
+                i + (boardLength - 1) * boardLength + 1,
+                boardLength
+            )
+        );
+    // diagonals top right to bottom left
+    const diagStart1 = cols[boardLength - 1].reverse().concat(rows[0].reverse().slice(1));
+    // diagonals top left to bottom right
+    const diagStart2 = cols[0].reverse().concat(rows[0].slice(1));
+    const diagLengths = numRange(1, boardLength + 1).concat(numRange(1, boardLength).reverse());
+    const diags1 = diagLengths
+        .map((length, index) =>
+            numRange(
+                diagStart1[index],
+                diagStart1[index] + length * (boardLength - 1),
+                boardLength - 1)
+        );
+    const diags2 = diagLengths
+        .map((length, index) =>
+            numRange(
+                diagStart2[index],
+                diagStart2[index] + length * (BoardRepresentation.boardLength + 1),
+                BoardRepresentation.boardLength + 1)
+        );
+    const lines = rows.concat(cols, diags1, diags2);
+    for (const line of lines) {
+        if (line.length < GameState.adjacentRequiredForWin) {
+            continue;
+        }
+        let current: string | null = null;
+        let counter: number = 0;
+        for (let i of line) {
+            if (squares[i] && squares[i] === current) {
+                ++counter;
+            }
+            else {
+                counter = 1;
+                current = squares[i];
+            }
+            if (counter === GameState.adjacentRequiredForWin) {
+                return squares[i];
+            }
         }
     }
     return null;
