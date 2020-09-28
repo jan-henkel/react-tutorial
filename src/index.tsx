@@ -59,7 +59,7 @@ class Board extends React.Component<BoardProperties> {
 
 class GameState {
     static readonly adjacentRequiredForWin: number = 3;
-    history: Array<BoardRepresentation> = [new BoardRepresentation];
+    history: Array<BoardRepresentation> = [new BoardRepresentation()];
     xIsNext: boolean = true;
     winner: string | null = null;
     stepNumber: number = 0;
@@ -68,7 +68,7 @@ class GameState {
 class Game extends React.Component<{}, GameState> {
     constructor(props: {}) {
         super(props);
-        this.state = new GameState;
+        this.state = new GameState();
     }
 
     handleClick(i: number) {
@@ -91,7 +91,7 @@ class Game extends React.Component<{}, GameState> {
         console.log(`handleClick(${i}) was called. squares[${i}]=${squares[i]}`);
     }
 
-    jumpTo(step : number) {
+    jumpTo(step: number) {
         const squares = this.state.history[step].squares;
         this.setState({
             stepNumber: step,
@@ -124,7 +124,7 @@ class Game extends React.Component<{}, GameState> {
                 'Go to move #' + move :
                 'Go to game start';
             return (
-                <li>
+                <li key={move}>
                     <button onClick={() => this.jumpTo(move)}>{desc}</button>
                 </li>
             );
