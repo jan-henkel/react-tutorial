@@ -10,7 +10,7 @@ class SquareProperties {
 class BoardRepresentation {
     static readonly boardLength: number = 3;
     static readonly numSquares: number = BoardRepresentation.boardLength ** 2;
-    squares: Array<string | null> = Array<string | null>(9).fill(null);
+    squares: Array<string | null> = Array<string | null>(BoardRepresentation.numSquares).fill(null);
 }
 
 interface BoardProperties extends BoardRepresentation {
