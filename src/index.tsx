@@ -1,19 +1,19 @@
-import React from 'react';
-import ReactDOM from 'react-dom';
+import * as React from 'react';
+import * as ReactDOM from 'react-dom';
 import './index.css';
 
 class SquareProperties {
-    value: string;
-    onClick: () => void;
+    value: string | null | undefined;
+    onClick: (() => void) | undefined;
 }
 
 class BoardRepresentation {
-    squares: Array<string>;
+    static readonly boardLength: number = 3;
+    static readonly numSquares: number = BoardRepresentation.boardLength ** 2;
+    squares: Array<string | null> = Array<string | null>(9).fill(null);
 }
 
-class BoardProperties extends BoardRepresentation {
-    static readonly boardLength: number = 3;
-    static readonly numSquares: number = BoardProperties.boardLength ** 2;
+interface BoardProperties extends BoardRepresentation {
     onClick: (index: number) => void;
 }
 
@@ -58,23 +58,16 @@ class Board extends React.Component<BoardProperties> {
 }
 
 class GameState {
-    history: Array<BoardRepresentation>;
-    xIsNext: boolean;
-    winner: string;
-    stepNumber: number;
+    history: Array<BoardRepresentation> = [new BoardRepresentation];
+    xIsNext: boolean = true;
+    winner: string | null = null;
+    stepNumber: number = 0;
 }
 
 class Game extends React.Component<{}, GameState> {
     constructor(props: {}) {
         super(props);
-        this.state = {
-            history: [{
-                squares: Array(9).fill(null)
-            }],
-            xIsNext: true,
-            winner: null,
-            stepNumber: 0,
-        };
+        this.state = new GameState;
     }
 
     handleClick(i: number) {
@@ -160,7 +153,7 @@ ReactDOM.render(
     document.getElementById('root')
 );
 
-function calculateWinner(squares: Array<string>) {
+function calculateWinner(squares: Array<string | null>) {
     const lines = [
         [0, 1, 2],
         [3, 4, 5],
