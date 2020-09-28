@@ -58,6 +58,7 @@ class Board extends React.Component<BoardProperties> {
 }
 
 class GameState {
+    static readonly adjacentRequiredForWin: number = 3;
     history: Array<BoardRepresentation> = [new BoardRepresentation];
     xIsNext: boolean = true;
     winner: string | null = null;
