@@ -32,7 +32,7 @@ class Board extends React.Component {
             xIsNext: !this.state.xIsNext,
             winner: calculateWinner(squares)
         });
-        console.log(`handleClick(${i}) was called. this.state.squares[${i}]=${this.state.squares[i]}`);
+        console.log(`handleClick(${i}) was called. squares[${i}]=${squares[i]}`);
     }
 
     renderSquare(i) {
