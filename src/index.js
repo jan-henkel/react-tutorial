@@ -75,6 +75,15 @@ class Game extends React.Component {
         console.log(`handleClick(${i}) was called. squares[${i}]=${squares[i]}`);
     }
 
+    jumpTo(step) {
+        const squares = this.state.history[step].squares;
+        this.setState({
+            stepNumber: step,
+            winner: calculateWinner(squares),
+            xIsNext: (step % 2) === 0,
+        })
+    }
+
     render() {
         const stepNumber = this.state.stepNumber;
         const winner = this.state.winner;
