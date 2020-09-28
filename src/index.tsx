@@ -26,6 +26,12 @@ function Square(props: SquareProperties) {
     );
 }
 
+function numRange(start: number, end: number, stepsize: number = 1): Array<number> {
+    return Array<undefined>(Math.floor((end - start + stepsize - 1) / stepsize))
+        .fill(undefined)
+        .map((_, i) => i * stepsize + start);
+}
+
 class Board extends React.Component<BoardProperties> {
     renderSquare(i: number) {
         return <Square
