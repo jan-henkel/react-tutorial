@@ -40,24 +40,18 @@ class Board extends React.Component<BoardProperties> {
         />;
     }
 
+    renderRow(row: number) {
+        const start: number = BoardRepresentation.boardLength * row;
+        const end: number = BoardRepresentation.boardLength * (row + 1);
+        return (<div className="board-row">
+            {numRange(start, end).map(i => this.renderSquare(i))}
+        </div>);
+    }
+
     render() {
         return (
             <div>
-                <div className="board-row">
-                    {this.renderSquare(0)}
-                    {this.renderSquare(1)}
-                    {this.renderSquare(2)}
-                </div>
-                <div className="board-row">
-                    {this.renderSquare(3)}
-                    {this.renderSquare(4)}
-                    {this.renderSquare(5)}
-                </div>
-                <div className="board-row">
-                    {this.renderSquare(6)}
-                    {this.renderSquare(7)}
-                    {this.renderSquare(8)}
-                </div>
+                {numRange(0, BoardRepresentation.boardLength).map(i => this.renderRow(i))}
             </div>
         );
     }
