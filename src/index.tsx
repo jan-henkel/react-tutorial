@@ -35,6 +35,7 @@ function numRange(start: number, end: number, stepsize: number = 1): Array<numbe
 class Board extends React.Component<BoardProperties> {
     renderSquare(i: number) {
         return <Square
+            key={i}
             value={this.props.squares[i]}
             onClick={() => { this.props.onClick(i) }}
         />;
@@ -43,7 +44,7 @@ class Board extends React.Component<BoardProperties> {
     renderRow(row: number) {
         const start: number = BoardRepresentation.boardLength * row;
         const end: number = BoardRepresentation.boardLength * (row + 1);
-        return (<div className="board-row">
+        return (<div className="board-row" key={row}>
             {numRange(start, end).map(i => this.renderSquare(i))}
         </div>);
     }
