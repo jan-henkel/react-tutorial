@@ -8,8 +8,9 @@ class SquareProperties {
 }
 
 class BoardRepresentation {
-    static readonly boardLength: number = 3;
-    static readonly numSquares: number = BoardRepresentation.boardLength ** 2;
+    static readonly boardHeight: number = 3;
+    static readonly boardWidth: number = 3;
+    static readonly numSquares: number = BoardRepresentation.boardHeight * BoardRepresentation.boardWidth;
     squares: Array<string | null> = Array<string | null>(BoardRepresentation.numSquares).fill(null);
 }
 
@@ -42,8 +43,8 @@ class Board extends React.Component<BoardProperties> {
     }
 
     renderRow(row: number) {
-        const start: number = BoardRepresentation.boardLength * row;
-        const end: number = BoardRepresentation.boardLength * (row + 1);
+        const start: number = BoardRepresentation.boardWidth * row;
+        const end: number = BoardRepresentation.boardWidth * (row + 1);
         return (<div className="board-row" key={row}>
             {numRange(start, end).map(i => this.renderSquare(i))}
         </div>);
@@ -52,7 +53,7 @@ class Board extends React.Component<BoardProperties> {
     render() {
         return (
             <div>
-                {numRange(0, BoardRepresentation.boardLength).map(i => this.renderRow(i))}
+                {numRange(0, BoardRepresentation.boardHeight).map(i => this.renderRow(i))}
             </div>
         );
     }
@@ -172,15 +173,16 @@ class WinConditionPattern {
     }
 
     checkPattern(squares: Array<string | null>, row: number, col: number): string | null {
-        const boardLength = BoardRepresentation.boardLength;
-        if (row + this.height > boardLength || col + this.width > boardLength) {
+        const boardHeight = BoardRepresentation.boardHeight;
+        const boardWidth = BoardRepresentation.boardWidth;
+        if (row + this.height > boardHeight || col + this.width > boardWidth) {
             return null;
         }
         let entry: string | null = null;
         for (let y = 0; y < this.height; ++y) {
             for (let x = 0; x < this.width; ++x) {
                 const patternIndex = y * this.width + x;
-                const boardIndex = (y + row) * boardLength + x + col;
+                const boardIndex = (y + row) * boardWidth + x + col;
                 if (this.pattern[patternIndex]) {
                     if (!squares[boardIndex]) {
                         return null;
@@ -220,10 +222,11 @@ const winConditionParrerns: Array<WinConditionPattern> = [
 ];
 
 function calculateWinner(squares: Array<string | null>): string | null {
-    const boardLength = BoardRepresentation.boardLength;
+    const boardHeight = BoardRepresentation.boardHeight;
+    const boardWidth = BoardRepresentation.boardWidth;
     for (let pattern of winConditionParrerns) {
-        for (let row = 0; row <= (boardLength - pattern.height); ++row) {
-            for (let col = 0; col <= (boardLength - pattern.width); ++col) {
+        for (let row = 0; row <= (boardHeight - pattern.height); ++row) {
+            for (let col = 0; col <= (boardWidth - pattern.width); ++col) {
                 let checkResult = pattern.checkPattern(squares, row, col);
                 if (checkResult) {
                     return checkResult;
