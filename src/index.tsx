@@ -2,16 +2,76 @@ import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 import './index.css';
 
+class Dimensions {
+    constructor(width: number, height: number) {
+        this.width = width;
+        this.height = height;
+    }
+    area(): number {
+        return this.width * this.height;
+    }
+    readonly width: number;
+    readonly height: number;
+}
+
 class SquareProperties {
     value: string | null | undefined;
     onClick: (() => void) | undefined;
 }
 
 class BoardRepresentation {
-    static readonly boardHeight: number = 3;
-    static readonly boardWidth: number = 3;
-    static readonly numSquares: number = BoardRepresentation.boardHeight * BoardRepresentation.boardWidth;
-    squares: Array<string | null> = Array<string | null>(BoardRepresentation.numSquares).fill(null);
+    constructor(dimensions: Dimensions, squares: Array<string | null> = Array<string | null>(dimensions.area()).fill(null)) {
+        this.dimensions = dimensions;
+        this.squares = squares;
+    }
+    squares: Array<string | null>;
+    dimensions: Dimensions;
+}
+
+class WinConditionPattern {
+    readonly height: number;
+    readonly width: number;
+    private pattern: Array<boolean>;
+
+    constructor(pattern: Array<string>) {
+        this.height = pattern.length;
+        this.width = pattern[0].length;
+        this.pattern = Array<boolean>(this.height * this.width).fill(false);
+        for (let y = 0; y < this.height; ++y) {
+            for (let x = 0; x < this.width; ++x) {
+                const index = y * this.width + x;
+                this.pattern[index] = (pattern[y][x] === '*');
+            }
+        }
+    }
+
+    checkPattern(board: BoardRepresentation, row: number, col: number): string | null {
+        const boardHeight = board.dimensions.height;
+        const boardWidth = board.dimensions.width;
+        const squares = board.squares;
+        if (row + this.height > boardHeight || col + this.width > boardWidth) {
+            return null;
+        }
+        let entry: string | null = null;
+        for (let y = 0; y < this.height; ++y) {
+            for (let x = 0; x < this.width; ++x) {
+                const patternIndex = y * this.width + x;
+                const boardIndex = (y + row) * boardWidth + x + col;
+                if (this.pattern[patternIndex]) {
+                    if (!squares[boardIndex]) {
+                        return null;
+                    }
+                    if (!entry) {
+                        entry = squares[boardIndex];
+                    }
+                    if (entry !== squares[boardIndex]) {
+                        return null;
+                    }
+                }
+            }
+        }
+        return entry;
+    }
 }
 
 interface BoardProperties extends BoardRepresentation {
@@ -43,8 +103,8 @@ class Board extends React.Component<BoardProperties> {
     }
 
     renderRow(row: number) {
-        const start: number = BoardRepresentation.boardWidth * row;
-        const end: number = BoardRepresentation.boardWidth * (row + 1);
+        const start: number = this.props.dimensions.width * row;
+        const end: number = this.props.dimensions.width * (row + 1);
         return (<div className="board-row" key={row}>
             {numRange(start, end).map(i => this.renderSquare(i))}
         </div>);
@@ -53,50 +113,57 @@ class Board extends React.Component<BoardProperties> {
     render() {
         return (
             <div>
-                {numRange(0, BoardRepresentation.boardHeight).map(i => this.renderRow(i))}
+                {numRange(0, this.props.dimensions.height).map(i => this.renderRow(i))}
             </div>
         );
     }
 }
 
 class GameState {
-    history: Array<BoardRepresentation> = [new BoardRepresentation()];
+    constructor(dimensions: Dimensions) {
+        this.boardHistory = [new BoardRepresentation(dimensions)];
+    }
+    boardHistory: Array<BoardRepresentation>;
     xIsNext: boolean = true;
     winner: string | null = null;
     stepNumber: number = 0;
 }
 
-class Game extends React.Component<{}, GameState> {
-    constructor(props: {}) {
+interface GameProperties {
+    dimensions: Dimensions;
+    winConditionPatterns: Array<WinConditionPattern>;
+}
+
+class Game extends React.Component<GameProperties, GameState> {
+    constructor(props: GameProperties) {
         super(props);
-        this.state = new GameState();
+        this.state = new GameState(props.dimensions);
     }
 
     handleClick(i: number) {
         const stepNumber = this.state.stepNumber;
-        const history = this.state.history.slice(0, stepNumber + 1);
+        const history = this.state.boardHistory.slice(0, stepNumber + 1);
         const current = history[stepNumber];
         const squares = current.squares.slice();
         if (this.state.winner || squares[i]) {
             return;
         }
         squares[i] = this.state.xIsNext ? 'X' : 'O';
+        const newBoard = new BoardRepresentation(this.props.dimensions, squares);
         this.setState({
-            history: history.concat([{
-                squares: squares,
-            }]),
+            boardHistory: history.concat([newBoard]),
             xIsNext: !this.state.xIsNext,
-            winner: calculateWinner(squares),
+            winner: calculateWinner(newBoard, this.props.winConditionPatterns),
             stepNumber: history.length,
         });
         console.log(`handleClick(${i}) was called. squares[${i}]=${squares[i]}`);
     }
 
     jumpTo(step: number) {
-        const squares = this.state.history[step].squares;
+        const board = this.state.boardHistory[step];
         this.setState({
             stepNumber: step,
-            winner: calculateWinner(squares),
+            winner: calculateWinner(board, this.props.winConditionPatterns),
             xIsNext: (step % 2) === 0,
         })
     }
@@ -104,7 +171,7 @@ class Game extends React.Component<{}, GameState> {
     render() {
         const stepNumber = this.state.stepNumber;
         const winner = this.state.winner;
-        const history = this.state.history;
+        const history = this.state.boardHistory;
         const current = history[stepNumber];
         const squares = current.squares.slice();
         const turn = history.length;
@@ -135,6 +202,7 @@ class Game extends React.Component<{}, GameState> {
             <div className="game">
                 <div className="game-board">
                     <Board
+                        dimensions={this.props.dimensions}
                         squares={squares}
                         onClick={(i) => this.handleClick(i)}
                     />
@@ -148,59 +216,8 @@ class Game extends React.Component<{}, GameState> {
     }
 }
 
-// ========================================
 
-ReactDOM.render(
-    <Game />,
-    document.getElementById('root')
-);
-
-class WinConditionPattern {
-    readonly height: number;
-    readonly width: number;
-    private pattern: Array<boolean>;
-
-    constructor(pattern: Array<string>) {
-        this.height = pattern.length;
-        this.width = pattern[0].length;
-        this.pattern = Array<boolean>(this.height * this.width).fill(false);
-        for (let y = 0; y < this.height; ++y) {
-            for (let x = 0; x < this.width; ++x) {
-                const index = y * this.width + x;
-                this.pattern[index] = (pattern[y][x] === '*');
-            }
-        }
-    }
-
-    checkPattern(squares: Array<string | null>, row: number, col: number): string | null {
-        const boardHeight = BoardRepresentation.boardHeight;
-        const boardWidth = BoardRepresentation.boardWidth;
-        if (row + this.height > boardHeight || col + this.width > boardWidth) {
-            return null;
-        }
-        let entry: string | null = null;
-        for (let y = 0; y < this.height; ++y) {
-            for (let x = 0; x < this.width; ++x) {
-                const patternIndex = y * this.width + x;
-                const boardIndex = (y + row) * boardWidth + x + col;
-                if (this.pattern[patternIndex]) {
-                    if (!squares[boardIndex]) {
-                        return null;
-                    }
-                    if (!entry) {
-                        entry = squares[boardIndex];
-                    }
-                    if (entry !== squares[boardIndex]) {
-                        return null;
-                    }
-                }
-            }
-        }
-        return entry;
-    }
-}
-
-const winConditionParrerns: Array<WinConditionPattern> = [
+const winConditionsGlobal: Array<WinConditionPattern> = [
     new WinConditionPattern([
         "***"
     ]),
@@ -221,13 +238,21 @@ const winConditionParrerns: Array<WinConditionPattern> = [
     ])
 ];
 
-function calculateWinner(squares: Array<string | null>): string | null {
-    const boardHeight = BoardRepresentation.boardHeight;
-    const boardWidth = BoardRepresentation.boardWidth;
+const dimensionsGlobal = new Dimensions(3, 3);
+// ========================================
+
+ReactDOM.render(
+    <Game dimensions={dimensionsGlobal} winConditionPatterns={winConditionsGlobal} />,
+    document.getElementById('root')
+);
+
+function calculateWinner(board: BoardRepresentation, winConditionParrerns: Array<WinConditionPattern>): string | null {
+    const boardHeight = board.dimensions.height;
+    const boardWidth = board.dimensions.width;
     for (let pattern of winConditionParrerns) {
         for (let row = 0; row <= (boardHeight - pattern.height); ++row) {
             for (let col = 0; col <= (boardWidth - pattern.width); ++col) {
-                let checkResult = pattern.checkPattern(squares, row, col);
+                let checkResult = pattern.checkPattern(board, row, col);
                 if (checkResult) {
                     return checkResult;
                 }
