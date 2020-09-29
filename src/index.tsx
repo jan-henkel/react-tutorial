@@ -348,7 +348,7 @@ class SettingsComponent extends React.Component<SettingsProperties> {
 
     renderWinCondition(conditionIndex: number) {
         return (
-            <>
+            <div key={conditionIndex}>
                 <hr />
                 <Board boardRepresentation={this.props.settings.winConditions[conditionIndex]} onClick={(fieldIndex) => this.handleWinConditionClick(conditionIndex, fieldIndex)} />
                 <form>
@@ -374,7 +374,7 @@ class SettingsComponent extends React.Component<SettingsProperties> {
                     &nbsp;
                     <button onClick={() => this.eraseWinCondition(conditionIndex)}>X</button>
                 </form>
-            </>);
+            </div>);
     }
 
     render() {
@@ -392,7 +392,10 @@ class GameWithSettings extends React.Component<GameSettings, GameSettings> {
     key: number = 0;
     constructor(props: GameSettings) {
         super(props);
-        this.state = props;
+        this.state = {
+            boardDimensions: new Dimensions(props.boardDimensions.width, props.boardDimensions.height),
+            winConditions: props.winConditions.slice()
+        }
     }
     render() {
         return (<>
