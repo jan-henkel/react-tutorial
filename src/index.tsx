@@ -381,6 +381,7 @@ class SettingsComponent extends React.Component<SettingsProperties> {
         return (
             <div>
                 {this.renderBoardDimensionFields()}
+                <h1>Win conditions</h1>
                 {Array.from(mapIterable(numRange(0, this.props.settings.winConditions.length), (i) => this.renderWinCondition(i)))}
                 <button onClick={() => this.addWinCondition()}>Add win condition</button>
             </div>);
