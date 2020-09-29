@@ -276,8 +276,8 @@ class SettingsComponent extends React.Component<SettingsProperties> {
         this.props.onSettingsChanged(newSettings);
     }
 
-    render() {
-        return (<div>
+    renderBoardDimensionFields() {
+        return (
             <form>
                 <label htmlFor="Width">Width (between 1 and 5):</label>
                 <input
@@ -297,8 +297,89 @@ class SettingsComponent extends React.Component<SettingsProperties> {
                     min="1"
                     max="5"
                     onChange={(event) => this.handleNewHeight(parseInt(event.target.value))} />
-            </form>
-        </div>);
+            </form>);
+    }
+
+    handleNewWinConditionWidth(conditionIndex: number, newWidth: number) {
+        let newSettings = this.props.settings;
+        const height = newSettings.winConditions[conditionIndex].dimensions.height;
+        newSettings.winConditions[conditionIndex].resize(new Dimensions(newWidth, height));
+        this.props.onSettingsChanged(newSettings);
+    }
+
+    handleNewWinConditionHeight(conditionIndex: number, newHeight: number) {
+        let newSettings = this.props.settings;
+        const width = newSettings.winConditions[conditionIndex].dimensions.width;
+        newSettings.winConditions[conditionIndex].resize(new Dimensions(width, newHeight));
+        this.props.onSettingsChanged(newSettings);
+    }
+
+    handleWinConditionClick(conditionIndex: number, fieldIndex: number) {
+        let newSettings = this.props.settings;
+        let newSquares = newSettings.winConditions[conditionIndex].squares.slice();
+        newSquares[fieldIndex] = newSquares[fieldIndex] ? null : "*";
+        newSettings.winConditions[conditionIndex].squares = newSquares;
+        this.props.onSettingsChanged(newSettings);
+    }
+
+    eraseWinCondition(conditionIndex: number) {
+        let winConditions = this.props.settings.winConditions.slice();
+        winConditions.splice(conditionIndex, 1);
+        let newSettings = {
+            boardDimensions: this.props.settings.boardDimensions,
+            winConditions: winConditions
+        }
+        this.props.onSettingsChanged(newSettings);
+    }
+
+    addWinCondition() {
+        let newSettings = this.props.settings;
+        newSettings.winConditions.push(
+            new WinConditionPattern(
+                new Dimensions(3, 3),
+                [
+                    "*", null, null,
+                    null, "*", null,
+                    null, null, "*",
+                ]));
+        this.props.onSettingsChanged(newSettings);
+    }
+
+    renderWinCondition(conditionIndex: number) {
+        return (
+            <>
+                <Board boardRepresentation={this.props.settings.winConditions[conditionIndex]} onClick={(fieldIndex) => this.handleWinConditionClick(conditionIndex, fieldIndex)} />
+                <form>
+                    <label htmlFor="Width">Width (between 1 and 5):</label>
+                    <input
+                        type="number"
+                        id="widthInput"
+                        defaultValue={this.props.settings.boardDimensions.width}
+                        name="width"
+                        min="1"
+                        max="5"
+                        onChange={(event) => this.handleNewWinConditionWidth(conditionIndex, parseInt(event.target.value))} />
+                    <label htmlFor="Height">Height (between 1 and 5):</label>
+                    <input
+                        type="number"
+                        id="heightInput"
+                        defaultValue={this.props.settings.boardDimensions.height}
+                        name="height"
+                        min="1"
+                        max="5"
+                        onChange={(event) => this.handleNewWinConditionHeight(conditionIndex, parseInt(event.target.value))} />
+                </form>
+                <button onClick={() => this.eraseWinCondition(conditionIndex)}>X</button>
+            </>);
+    }
+
+    render() {
+        return (
+            <div>
+                {this.renderBoardDimensionFields()}
+                {Array.from(mapIterable(numRange(0, this.props.settings.winConditions.length), (i) => this.renderWinCondition(i)))}
+                <button onClick={() => this.addWinCondition()}>Add win condition</button>
+            </div>);
     }
 }
 
