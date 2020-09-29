@@ -24,6 +24,18 @@ class BoardRepresentation {
         this.dimensions = dimensions;
         this.squares = squares;
     }
+    resize(newDimensions: Dimensions) {
+        let newSquares = Array<string | null>(newDimensions.area()).fill(null);
+        for (let y = 0; y < newDimensions.height; ++y) {
+            for (let x = 0; x < newDimensions.width; ++x) {
+                if (y < this.dimensions.height && x < this.dimensions.width) {
+                    newSquares[y * newDimensions.width + x] = this.squares[y * this.dimensions.width + x];
+                }
+            }
+        }
+        this.squares = newSquares;
+        this.dimensions = newDimensions;
+    }
     squares: Array<string | null>;
     dimensions: Dimensions;
 }
