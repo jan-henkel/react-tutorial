@@ -351,7 +351,7 @@ class SettingsComponent extends React.Component<SettingsProperties> {
             <div key={conditionIndex}>
                 <hr />
                 <Board boardRepresentation={this.props.settings.winConditions[conditionIndex]} onClick={(fieldIndex) => this.handleWinConditionClick(conditionIndex, fieldIndex)} />
-                <form>
+                <div>
                     <label htmlFor="Width">Width (between 1 and 5):</label>
                     <input
                         type="number"
@@ -373,7 +373,7 @@ class SettingsComponent extends React.Component<SettingsProperties> {
                         onChange={(event) => this.handleNewWinConditionHeight(conditionIndex, parseInt(event.target.value))} />
                     &nbsp;
                     <button onClick={() => this.eraseWinCondition(conditionIndex)}>X</button>
-                </form>
+                </div>
             </div>);
     }
 
