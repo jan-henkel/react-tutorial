@@ -87,10 +87,18 @@ function Square(props: SquareProperties) {
     );
 }
 
-function numRange(start: number, end: number, stepsize: number = 1): Array<number> {
-    return Array<undefined>(Math.floor((end - start + stepsize - 1) / stepsize))
-        .fill(undefined)
-        .map((_, i) => i * stepsize + start);
+function* numRange(start: number, end: number, stepsize: number = 1) {
+    let current = start;
+    while (current !== end) {
+        yield current;
+        current += stepsize;
+    }
+}
+
+function* mapIterable<InputType, OutputType>(iterable: Iterable<InputType>, func: ((input: InputType) => OutputType)) {
+    for (let i of iterable) {
+        yield func(i);
+    }
 }
 
 class Board extends React.Component<BoardProperties> {
@@ -106,14 +114,14 @@ class Board extends React.Component<BoardProperties> {
         const start: number = this.props.dimensions.width * row;
         const end: number = this.props.dimensions.width * (row + 1);
         return (<div className="board-row" key={row}>
-            {numRange(start, end).map(i => this.renderSquare(i))}
+            {Array.from(mapIterable(numRange(start, end), (i) => this.renderSquare(i)))}
         </div>);
     }
 
     render() {
         return (
             <div>
-                {numRange(0, this.props.dimensions.height).map(i => this.renderRow(i))}
+                {Array.from(mapIterable(numRange(0, this.props.dimensions.height), (i => this.renderRow(i))))}
             </div>
         );
     }
