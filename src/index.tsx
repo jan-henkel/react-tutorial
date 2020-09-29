@@ -279,7 +279,7 @@ class SettingsComponent extends React.Component<SettingsProperties> {
     renderBoardDimensionFields() {
         return (
             <form>
-                <label htmlFor="Width">Width (between 1 and 5):</label>
+                <label htmlFor="Width">Board width (between 1 and 5):</label>
                 <input
                     type="number"
                     id="widthInput"
@@ -288,7 +288,8 @@ class SettingsComponent extends React.Component<SettingsProperties> {
                     min="1"
                     max="5"
                     onChange={(event) => this.handleNewWidth(parseInt(event.target.value))} />
-                <label htmlFor="Height">Height (between 1 and 5):</label>
+                &nbsp;
+                <label htmlFor="Height">Board height (between 1 and 5):</label>
                 <input
                     type="number"
                     id="heightInput"
@@ -348,6 +349,7 @@ class SettingsComponent extends React.Component<SettingsProperties> {
     renderWinCondition(conditionIndex: number) {
         return (
             <>
+                <hr />
                 <Board boardRepresentation={this.props.settings.winConditions[conditionIndex]} onClick={(fieldIndex) => this.handleWinConditionClick(conditionIndex, fieldIndex)} />
                 <form>
                     <label htmlFor="Width">Width (between 1 and 5):</label>
@@ -359,6 +361,7 @@ class SettingsComponent extends React.Component<SettingsProperties> {
                         min="1"
                         max="5"
                         onChange={(event) => this.handleNewWinConditionWidth(conditionIndex, parseInt(event.target.value))} />
+                    &nbsp;
                     <label htmlFor="Height">Height (between 1 and 5):</label>
                     <input
                         type="number"
@@ -368,8 +371,9 @@ class SettingsComponent extends React.Component<SettingsProperties> {
                         min="1"
                         max="5"
                         onChange={(event) => this.handleNewWinConditionHeight(conditionIndex, parseInt(event.target.value))} />
+                    &nbsp;
+                    <button onClick={() => this.eraseWinCondition(conditionIndex)}>X</button>
                 </form>
-                <button onClick={() => this.eraseWinCondition(conditionIndex)}>X</button>
             </>);
     }
 
@@ -392,6 +396,7 @@ class GameWithSettings extends React.Component<GameSettings, GameSettings> {
     render() {
         return (<>
             <Game key={this.key} dimensions={this.state.boardDimensions} winConditionPatterns={this.state.winConditions} />
+            <br />
             <SettingsComponent settings={this.state} onSettingsChanged={(newSettings: GameSettings) => { ++this.key; this.setState(newSettings); }} />
         </>);
     }
