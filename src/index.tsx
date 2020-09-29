@@ -28,36 +28,22 @@ class BoardRepresentation {
     dimensions: Dimensions;
 }
 
-class WinConditionPattern {
-    readonly height: number;
-    readonly width: number;
-    private pattern: Array<boolean>;
-
-    constructor(pattern: Array<string>) {
-        this.height = pattern.length;
-        this.width = pattern[0].length;
-        this.pattern = Array<boolean>(this.height * this.width).fill(false);
-        for (let y = 0; y < this.height; ++y) {
-            for (let x = 0; x < this.width; ++x) {
-                const index = y * this.width + x;
-                this.pattern[index] = (pattern[y][x] === '*');
-            }
-        }
-    }
-
+class WinConditionPattern extends BoardRepresentation {
     checkPattern(board: BoardRepresentation, row: number, col: number): string | null {
         const boardHeight = board.dimensions.height;
         const boardWidth = board.dimensions.width;
+        const patternHeight = this.dimensions.height;
+        const patternWidth = this.dimensions.width;
         const squares = board.squares;
-        if (row + this.height > boardHeight || col + this.width > boardWidth) {
+        if (row + patternHeight > boardHeight || col + patternWidth > boardWidth) {
             return null;
         }
         let entry: string | null = null;
-        for (let y = 0; y < this.height; ++y) {
-            for (let x = 0; x < this.width; ++x) {
-                const patternIndex = y * this.width + x;
+        for (let y = 0; y < patternHeight; ++y) {
+            for (let x = 0; x < patternWidth; ++x) {
+                const patternIndex = y * patternWidth + x;
                 const boardIndex = (y + row) * boardWidth + x + col;
-                if (this.pattern[patternIndex]) {
+                if (this.squares[patternIndex]) {
                     if (!squares[boardIndex]) {
                         return null;
                     }
@@ -78,15 +64,6 @@ interface BoardProperties extends BoardRepresentation {
     onClick: (index: number) => void;
 }
 
-// function component
-function Square(props: SquareProperties) {
-    return (
-        <button className="square" onClick={props.onClick}>
-            {props.value}
-        </button>
-    );
-}
-
 function* numRange(start: number, end: number, stepsize: number = 1) {
     let current = start;
     while (current !== end) {
@@ -99,6 +76,15 @@ function* mapIterable<InputType, OutputType>(iterable: Iterable<InputType>, func
     for (let i of iterable) {
         yield func(i);
     }
+}
+
+// function component
+function Square(props: SquareProperties) {
+    return (
+        <button className="square" onClick={props.onClick}>
+            {props.value}
+        </button>
+    );
 }
 
 class Board extends React.Component<BoardProperties> {
@@ -224,26 +210,33 @@ class Game extends React.Component<GameProperties, GameState> {
     }
 }
 
-
 const winConditionsGlobal: Array<WinConditionPattern> = [
-    new WinConditionPattern([
-        "***"
-    ]),
-    new WinConditionPattern([
-        "*",
-        "*",
-        "*"
-    ]),
-    new WinConditionPattern([
-        "*00",
-        "0*0",
-        "00*"
-    ]),
-    new WinConditionPattern([
-        "00*",
-        "0*0",
-        "*00"
-    ])
+    new WinConditionPattern(
+        new Dimensions(3, 3),
+        [
+            "*", null, null,
+            null, "*", null,
+            null, null, "*",
+        ]),
+    new WinConditionPattern(
+        new Dimensions(3, 3),
+        [
+            null, null, "*",
+            null, "*", null,
+            "*", null, null,
+        ]),
+    new WinConditionPattern(
+        new Dimensions(3, 1),
+        [
+            "*", "*", "*",
+        ]),
+    new WinConditionPattern(
+        new Dimensions(1, 3),
+        [
+            "*",
+            "*",
+            "*",
+        ]),
 ];
 
 const dimensionsGlobal = new Dimensions(3, 3);
@@ -320,8 +313,8 @@ function calculateWinner(board: BoardRepresentation, winConditionParrerns: Array
     const boardHeight = board.dimensions.height;
     const boardWidth = board.dimensions.width;
     for (let pattern of winConditionParrerns) {
-        for (let row = 0; row <= (boardHeight - pattern.height); ++row) {
-            for (let col = 0; col <= (boardWidth - pattern.width); ++col) {
+        for (let row = 0; row <= (boardHeight - pattern.dimensions.height); ++row) {
+            for (let col = 0; col <= (boardWidth - pattern.dimensions.width); ++col) {
                 let checkResult = pattern.checkPattern(board, row, col);
                 if (checkResult) {
                     return checkResult;
