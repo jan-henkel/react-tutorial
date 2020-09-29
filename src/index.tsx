@@ -60,7 +60,8 @@ class WinConditionPattern extends BoardRepresentation {
     }
 }
 
-interface BoardProperties extends BoardRepresentation {
+interface BoardProperties {
+    boardRepresentation: BoardRepresentation
     onClick: (index: number) => void;
 }
 
@@ -91,14 +92,14 @@ class Board extends React.Component<BoardProperties> {
     renderSquare(i: number) {
         return <Square
             key={i}
-            value={this.props.squares[i]}
+            value={this.props.boardRepresentation.squares[i]}
             onClick={() => this.props.onClick(i)}
         />;
     }
 
     renderRow(row: number) {
-        const start: number = this.props.dimensions.width * row;
-        const end: number = this.props.dimensions.width * (row + 1);
+        const start: number = this.props.boardRepresentation.dimensions.width * row;
+        const end: number = this.props.boardRepresentation.dimensions.width * (row + 1);
         return (<div className="board-row" key={row}>
             {Array.from(mapIterable(numRange(start, end), (i) => this.renderSquare(i)))}
         </div>);
@@ -107,7 +108,7 @@ class Board extends React.Component<BoardProperties> {
     render() {
         return (
             <div>
-                {Array.from(mapIterable(numRange(0, this.props.dimensions.height), (i => this.renderRow(i))))}
+                {Array.from(mapIterable(numRange(0, this.props.boardRepresentation.dimensions.height), (i => this.renderRow(i))))}
             </div>
         );
     }
@@ -196,8 +197,7 @@ class Game extends React.Component<GameProperties, GameState> {
             <div className="game">
                 <div className="game-board">
                     <Board
-                        dimensions={this.props.dimensions}
-                        squares={squares}
+                        boardRepresentation={new BoardRepresentation(this.props.dimensions, squares)}
                         onClick={(i) => this.handleClick(i)}
                     />
                 </div>
