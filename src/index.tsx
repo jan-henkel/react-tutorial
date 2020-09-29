@@ -10,8 +10,8 @@ class Dimensions {
     area(): number {
         return this.width * this.height;
     }
-    readonly width: number;
-    readonly height: number;
+    width: number;
+    height: number;
 }
 
 class SquareProperties {
@@ -98,7 +98,7 @@ class Board extends React.Component<BoardProperties> {
         return <Square
             key={i}
             value={this.props.squares[i]}
-            onClick={() => { this.props.onClick(i) }}
+            onClick={() => this.props.onClick(i)}
         />;
     }
 
@@ -239,10 +239,72 @@ const winConditionsGlobal: Array<WinConditionPattern> = [
 ];
 
 const dimensionsGlobal = new Dimensions(3, 3);
-// ========================================
+
+interface GameSettings {
+    boardDimensions: Dimensions;
+    winConditions: Array<WinConditionPattern>;
+}
+
+interface SettingsProperties {
+    settings: GameSettings;
+    onSettingsChanged: (settings: GameSettings) => void;
+}
+
+class SettingsComponent extends React.Component<SettingsProperties> {
+    handleNewWidth(newWidth: number) {
+        let newSettings = this.props.settings;
+        newSettings.boardDimensions.width = newWidth;
+        this.props.onSettingsChanged(newSettings);
+    }
+
+    handleNewHeight(newHeight: number) {
+        let newSettings = this.props.settings;
+        newSettings.boardDimensions.height = newHeight;
+        this.props.onSettingsChanged(newSettings);
+    }
+
+    render() {
+        return (<div>
+            <form>
+                <label htmlFor="Width">Width (between 1 and 5):</label>
+                <input
+                    type="number"
+                    id="widthInput"
+                    defaultValue={this.props.settings.boardDimensions.width}
+                    name="width"
+                    min="1"
+                    max="5"
+                    onChange={(event) => this.handleNewWidth(parseInt(event.target.value))} />
+                <label htmlFor="Height">Height (between 1 and 5):</label>
+                <input
+                    type="number"
+                    id="heightInput"
+                    defaultValue={this.props.settings.boardDimensions.height}
+                    name="height"
+                    min="1"
+                    max="5"
+                    onChange={(event) => this.handleNewHeight(parseInt(event.target.value))} />
+            </form>
+        </div>);
+    }
+}
+
+class GameWithSettings extends React.Component<GameSettings, GameSettings> {
+    key : number = 0;
+    constructor(props: GameSettings) {
+        super(props);
+        this.state = props;
+    }
+    render() {
+        return (<>
+            <Game key={this.key} dimensions={this.state.boardDimensions} winConditionPatterns={this.state.winConditions} />
+            <SettingsComponent settings={this.state} onSettingsChanged={(newSettings: GameSettings) => {++this.key; this.setState(newSettings);}} />
+        </>);
+    }
+}
 
 ReactDOM.render(
-    <Game dimensions={dimensionsGlobal} winConditionPatterns={winConditionsGlobal} />,
+    <GameWithSettings boardDimensions={dimensionsGlobal} winConditions={winConditionsGlobal} />,
     document.getElementById('root')
 );
 
