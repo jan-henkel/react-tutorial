@@ -298,7 +298,7 @@ class SettingsComponent extends React.Component<SettingsProperties> {
 }
 
 class GameWithSettings extends React.Component<GameSettings, GameSettings> {
-    key : number = 0;
+    key: number = 0;
     constructor(props: GameSettings) {
         super(props);
         this.state = props;
@@ -306,7 +306,7 @@ class GameWithSettings extends React.Component<GameSettings, GameSettings> {
     render() {
         return (<>
             <Game key={this.key} dimensions={this.state.boardDimensions} winConditionPatterns={this.state.winConditions} />
-            <SettingsComponent settings={this.state} onSettingsChanged={(newSettings: GameSettings) => {++this.key; this.setState(newSettings);}} />
+            <SettingsComponent settings={this.state} onSettingsChanged={(newSettings: GameSettings) => { ++this.key; this.setState(newSettings); }} />
         </>);
     }
 }
