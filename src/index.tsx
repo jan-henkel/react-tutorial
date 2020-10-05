@@ -1,94 +1,90 @@
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
+import { Size, Point, area } from './modules/rect'
+import { numRange, mapIterable } from './modules/range_iterable'
+import update from 'immutability-helper'
 import './index.css';
 
-class Dimensions {
-    constructor(width: number, height: number) {
-        this.width = width;
-        this.height = height;
-    }
-    area(): number {
-        return this.width * this.height;
-    }
-    width: number;
-    height: number;
-}
-
-class SquareProperties {
-    value: string | null | undefined;
-    onClick: (() => void) | undefined;
-}
-
-class BoardRepresentation {
-    constructor(dimensions: Dimensions, squares: Array<string | null> = Array<string | null>(dimensions.area()).fill(null)) {
-        this.dimensions = dimensions;
+class Board {
+    constructor(size: Size, squares: Array<string | null> = Array(area(size)).fill(null)) {
+        this.size = size;
         this.squares = squares;
     }
-    resize(newDimensions: Dimensions) {
-        let newSquares = Array<string | null>(newDimensions.area()).fill(null);
-        for (let y = 0; y < newDimensions.height; ++y) {
-            for (let x = 0; x < newDimensions.width; ++x) {
-                if (y < this.dimensions.height && x < this.dimensions.width) {
-                    newSquares[y * newDimensions.width + x] = this.squares[y * this.dimensions.width + x];
+    resize(newSize: Size): Board {
+        let newSquares = Array(area(newSize)).fill(null);
+        for (let y = 0; y < newSize.height; ++y) {
+            for (let x = 0; x < newSize.width; ++x) {
+                if (y < this.size.height && x < this.size.width) {
+                    newSquares[y * newSize.width + x] = this.squares[y * this.size.width + x];
                 }
             }
         }
-        this.squares = newSquares;
-        this.dimensions = newDimensions;
+        return new Board(newSize, newSquares);
     }
     squares: Array<string | null>;
-    dimensions: Dimensions;
+    size: Size;
 }
 
-class WinConditionPattern extends BoardRepresentation {
-    checkPattern(board: BoardRepresentation, row: number, col: number): string | null {
-        const boardHeight = board.dimensions.height;
-        const boardWidth = board.dimensions.width;
-        const patternHeight = this.dimensions.height;
-        const patternWidth = this.dimensions.width;
-        const squares = board.squares;
-        if (row + patternHeight > boardHeight || col + patternWidth > boardWidth) {
-            return null;
-        }
-        let entry: string | null = null;
-        for (let y = 0; y < patternHeight; ++y) {
-            for (let x = 0; x < patternWidth; ++x) {
-                const patternIndex = y * patternWidth + x;
-                const boardIndex = (y + row) * boardWidth + x + col;
-                if (this.squares[patternIndex]) {
-                    if (!squares[boardIndex]) {
-                        return null;
-                    }
-                    if (!entry) {
-                        entry = squares[boardIndex];
-                    }
-                    if (entry !== squares[boardIndex]) {
-                        return null;
-                    }
+function matchWinConditionAtOrigin(board: Board, winCondition: Board, topLeft: Point): string | null {
+    const boardHeight = board.size.height;
+    const boardWidth = board.size.width;
+    const patternHeight = winCondition.size.height;
+    const patternWidth = winCondition.size.width;
+    const squares = board.squares;
+    if (topLeft.y + patternHeight > boardHeight || topLeft.x + patternWidth > boardWidth) {
+        return null;
+    }
+    let entry: string | null = null;
+    for (let y = 0; y < patternHeight; ++y) {
+        for (let x = 0; x < patternWidth; ++x) {
+            const patternIndex = y * patternWidth + x;
+            const boardIndex = (y + topLeft.y) * boardWidth + x + topLeft.x;
+            if (winCondition.squares[patternIndex]) {
+                if (!squares[boardIndex]) {
+                    return null;
+                }
+                if (!entry) {
+                    entry = squares[boardIndex];
+                }
+                if (entry !== squares[boardIndex]) {
+                    return null;
                 }
             }
         }
-        return entry;
     }
+    return entry;
+}
+
+function matchWinCondition(board: Board, winCondition: Board): string | null {
+    for (let y = 0; y <= (board.size.height - winCondition.size.height); ++y) {
+        for (let x = 0; x <= (board.size.width - winCondition.size.width); ++x) {
+            let checkResult = matchWinConditionAtOrigin(board, winCondition, { x, y });
+            if (checkResult) {
+                return checkResult;
+            }
+        }
+    }
+    return null;
+}
+
+function calculateWinner(board: Board, winConditions: Array<Board>): string | null {
+    for (let pattern of winConditions) {
+        let checkResult = matchWinCondition(board, pattern);
+        if (checkResult) {
+            return checkResult;
+        }
+    }
+    return null;
+}
+
+interface SquareProperties {
+    value: string | null;
+    onClick: (() => void);
 }
 
 interface BoardProperties {
-    boardRepresentation: BoardRepresentation
+    board: Board;
     onClick: (index: number) => void;
-}
-
-function* numRange(start: number, end: number, stepsize: number = 1) {
-    let current = start;
-    while (current !== end) {
-        yield current;
-        current += stepsize;
-    }
-}
-
-function* mapIterable<InputType, OutputType>(iterable: Iterable<InputType>, func: ((input: InputType) => OutputType)) {
-    for (let i of iterable) {
-        yield func(i);
-    }
 }
 
 // function component
@@ -100,18 +96,18 @@ function Square(props: SquareProperties) {
     );
 }
 
-class Board extends React.Component<BoardProperties> {
+class BoardComponent extends React.Component<BoardProperties> {
     renderSquare(i: number) {
         return <Square
             key={i}
-            value={this.props.boardRepresentation.squares[i]}
+            value={this.props.board.squares[i]}
             onClick={() => this.props.onClick(i)}
         />;
     }
 
     renderRow(row: number) {
-        const start: number = this.props.boardRepresentation.dimensions.width * row;
-        const end: number = this.props.boardRepresentation.dimensions.width * (row + 1);
+        const start: number = this.props.board.size.width * row;
+        const end: number = this.props.board.size.width * (row + 1);
         return (<div className="board-row" key={row}>
             {Array.from(mapIterable(numRange(start, end), (i) => this.renderSquare(i)))}
         </div>);
@@ -120,65 +116,82 @@ class Board extends React.Component<BoardProperties> {
     render() {
         return (
             <div>
-                {Array.from(mapIterable(numRange(0, this.props.boardRepresentation.dimensions.height), (i => this.renderRow(i))))}
+                {Array.from(
+                    mapIterable(
+                        numRange(0, this.props.board.size.height),
+                        (i => this.renderRow(i))))}
             </div>
         );
     }
 }
 
 class GameState {
-    constructor(dimensions: Dimensions) {
-        this.boardHistory = [new BoardRepresentation(dimensions)];
+    constructor(size: Size) {
+        this.boardHistory = [new Board(size)];
     }
-    boardHistory: Array<BoardRepresentation>;
+    boardHistory: Array<Board>;
     xIsNext: boolean = true;
     winner: string | null = null;
     stepNumber: number = 0;
 }
 
-interface GameProperties {
-    dimensions: Dimensions;
-    winConditionPatterns: Array<WinConditionPattern>;
+interface Settings {
+    boardSize: Size;
+    winConditions: Array<Board>;
 }
 
-class Game extends React.Component<GameProperties, GameState> {
-    constructor(props: GameProperties) {
-        super(props);
-        this.state = new GameState(props.dimensions);
-    }
+interface State {
+    gameState: GameState;
+    settings: Settings;
+}
 
-    handleClick(i: number) {
-        const stepNumber = this.state.stepNumber;
-        const history = this.state.boardHistory.slice(0, stepNumber + 1);
-        const current = history[stepNumber];
-        const squares = current.squares.slice();
-        if (this.state.winner || squares[i]) {
+interface SettingsProperties {
+    settings: Settings;
+    onSettingsChanged: (settings: Settings) => void;
+}
+
+// The game component needs to know settings and game state
+interface GameProperties {
+    gameState: GameState;
+    settings: Settings;
+    onStateChange: (stateUpdate: GameState) => void;
+}
+
+class Game extends React.Component<GameProperties> {
+    handleClick(i: number): void {
+        const gameState = this.props.gameState;
+        const stepNumber = gameState.stepNumber;
+        const history = gameState.boardHistory.slice(0, stepNumber + 1);
+        const currentBoard = history[stepNumber];
+        const squares = currentBoard.squares.slice();
+        if (gameState.winner || squares[i]) {
             return;
         }
-        squares[i] = this.state.xIsNext ? 'X' : 'O';
-        const newBoard = new BoardRepresentation(this.props.dimensions, squares);
-        this.setState({
+        squares[i] = gameState.xIsNext ? 'X' : 'O';
+        const newBoard = new Board(this.props.settings.boardSize, squares);
+        this.props.onStateChange({
             boardHistory: history.concat([newBoard]),
-            xIsNext: !this.state.xIsNext,
-            winner: calculateWinner(newBoard, this.props.winConditionPatterns),
-            stepNumber: history.length,
+            xIsNext: !gameState.xIsNext,
+            winner: calculateWinner(newBoard, this.props.settings.winConditions),
+            stepNumber: history.length
         });
-        console.log(`handleClick(${i}) was called. squares[${i}]=${squares[i]}`);
     }
 
     jumpTo(step: number) {
-        const board = this.state.boardHistory[step];
-        this.setState({
-            stepNumber: step,
-            winner: calculateWinner(board, this.props.winConditionPatterns),
-            xIsNext: (step % 2) === 0,
-        })
+        const newState = update(this.props.gameState,
+            {
+                stepNumber: { $set: step },
+                winner: { $set: calculateWinner(this.props.gameState.boardHistory[step], this.props.settings.winConditions) },
+                xIsNext: { $set: (step % 2) === 0 }
+            })
+        this.props.onStateChange(newState);
     }
 
     render() {
-        const stepNumber = this.state.stepNumber;
-        const winner = this.state.winner;
-        const history = this.state.boardHistory;
+        const gameState = this.props.gameState;
+        const stepNumber = gameState.stepNumber;
+        const winner = gameState.winner;
+        const history = gameState.boardHistory;
         const current = history[stepNumber];
         const squares = current.squares.slice();
         const turn = history.length;
@@ -191,7 +204,7 @@ class Game extends React.Component<GameProperties, GameState> {
             status += 'Tie'
         }
         else {
-            status += 'Next player: ' + (this.state.xIsNext ? 'X' : 'O');
+            status += 'Next player: ' + (gameState.xIsNext ? 'X' : 'O');
         }
 
         const moves = history.map((step, move) => {
@@ -208,8 +221,8 @@ class Game extends React.Component<GameProperties, GameState> {
         return (
             <div className="game">
                 <div className="game-board">
-                    <Board
-                        boardRepresentation={new BoardRepresentation(this.props.dimensions, squares)}
+                    <BoardComponent
+                        board={new Board(this.props.settings.boardSize, squares)}
                         onClick={(i) => this.handleClick(i)}
                     />
                 </div>
@@ -222,28 +235,28 @@ class Game extends React.Component<GameProperties, GameState> {
     }
 }
 
-const winConditionsGlobal: Array<WinConditionPattern> = [
-    new WinConditionPattern(
-        new Dimensions(3, 3),
+const winConditionsGlobal: Array<Board> = [
+    new Board(
+        { width: 3, height: 3 },
         [
             "*", null, null,
             null, "*", null,
             null, null, "*",
         ]),
-    new WinConditionPattern(
-        new Dimensions(3, 3),
+    new Board(
+        { width: 3, height: 3 },
         [
             null, null, "*",
             null, "*", null,
             "*", null, null,
         ]),
-    new WinConditionPattern(
-        new Dimensions(3, 1),
+    new Board(
+        { width: 3, height: 1 },
         [
             "*", "*", "*",
         ]),
-    new WinConditionPattern(
-        new Dimensions(1, 3),
+    new Board(
+        { width: 1, height: 3 },
         [
             "*",
             "*",
@@ -251,28 +264,16 @@ const winConditionsGlobal: Array<WinConditionPattern> = [
         ]),
 ];
 
-const dimensionsGlobal = new Dimensions(3, 3);
-
-interface GameSettings {
-    boardDimensions: Dimensions;
-    winConditions: Array<WinConditionPattern>;
-}
-
-interface SettingsProperties {
-    settings: GameSettings;
-    onSettingsChanged: (settings: GameSettings) => void;
-}
+const sizeGlobal = { width: 3, height: 3 };
 
 class SettingsComponent extends React.Component<SettingsProperties> {
     handleNewWidth(newWidth: number) {
-        let newSettings = this.props.settings;
-        newSettings.boardDimensions.width = newWidth;
+        const newSettings = update(this.props.settings, { boardSize: { width: { $set: newWidth } } });
         this.props.onSettingsChanged(newSettings);
     }
 
     handleNewHeight(newHeight: number) {
-        let newSettings = this.props.settings;
-        newSettings.boardDimensions.height = newHeight;
+        const newSettings = update(this.props.settings, { boardSize: { height: { $set: newHeight } } });
         this.props.onSettingsChanged(newSettings);
     }
 
@@ -283,7 +284,7 @@ class SettingsComponent extends React.Component<SettingsProperties> {
                 <input
                     type="number"
                     id="widthInput"
-                    defaultValue={this.props.settings.boardDimensions.width}
+                    defaultValue={this.props.settings.boardSize.width}
                     name="width"
                     min="1"
                     max="5"
@@ -293,7 +294,7 @@ class SettingsComponent extends React.Component<SettingsProperties> {
                 <input
                     type="number"
                     id="heightInput"
-                    defaultValue={this.props.settings.boardDimensions.height}
+                    defaultValue={this.props.settings.boardSize.height}
                     name="height"
                     min="1"
                     max="5"
@@ -302,61 +303,67 @@ class SettingsComponent extends React.Component<SettingsProperties> {
     }
 
     handleNewWinConditionWidth(conditionIndex: number, newWidth: number) {
-        let newSettings = this.props.settings;
-        const height = newSettings.winConditions[conditionIndex].dimensions.height;
-        newSettings.winConditions[conditionIndex].resize(new Dimensions(newWidth, height));
+        const newSettings = update(this.props.settings,
+            {
+                winConditions: {
+                    [conditionIndex]: { $apply: (winCondition) => winCondition.resize(update(winCondition.size, { width: { $set: newWidth } })) }
+                }
+            });
         this.props.onSettingsChanged(newSettings);
     }
 
     handleNewWinConditionHeight(conditionIndex: number, newHeight: number) {
-        let newSettings = this.props.settings;
-        const width = newSettings.winConditions[conditionIndex].dimensions.width;
-        newSettings.winConditions[conditionIndex].resize(new Dimensions(width, newHeight));
+        const newSettings = update(this.props.settings,
+            {
+                winConditions: {
+                    [conditionIndex]: { $apply: (winCondition) => winCondition.resize(update(winCondition.size, { height: { $set: newHeight } })) }
+                }
+            });
         this.props.onSettingsChanged(newSettings);
     }
 
     handleWinConditionClick(conditionIndex: number, fieldIndex: number) {
-        let newSettings = this.props.settings;
-        let newSquares = newSettings.winConditions[conditionIndex].squares.slice();
-        newSquares[fieldIndex] = newSquares[fieldIndex] ? null : "*";
-        newSettings.winConditions[conditionIndex].squares = newSquares;
+        const newSettings = update(this.props.settings,
+            {
+                winConditions: { [conditionIndex]: { squares: { [fieldIndex]: { $apply: (square) => square ? null : "*" } } } }
+            });
         this.props.onSettingsChanged(newSettings);
     }
 
     eraseWinCondition(conditionIndex: number) {
-        let winConditions = this.props.settings.winConditions.slice();
-        winConditions.splice(conditionIndex, 1);
-        let newSettings = {
-            boardDimensions: this.props.settings.boardDimensions,
-            winConditions: winConditions
-        }
+        const newSettings = update(this.props.settings,
+            { winConditions: { $splice: [[conditionIndex, 1]] } });
         this.props.onSettingsChanged(newSettings);
     }
 
     addWinCondition() {
-        let newSettings = this.props.settings;
-        newSettings.winConditions.push(
-            new WinConditionPattern(
-                new Dimensions(3, 3),
-                [
-                    "*", null, null,
-                    null, "*", null,
-                    null, null, "*",
-                ]));
+        const newSettings = update(this.props.settings,
+            {
+                winConditions: {
+                    $push: [
+                        new Board({ width: 3, height: 3 },
+                            [
+                                "*", null, null,
+                                null, "*", null,
+                                null, null, "*",
+                            ])
+                    ]
+                }
+            });
         this.props.onSettingsChanged(newSettings);
     }
 
     renderWinCondition(conditionIndex: number) {
         return (
-            <div key={conditionIndex}>
+            <div key={conditionIndex} >
                 <hr />
-                <Board boardRepresentation={this.props.settings.winConditions[conditionIndex]} onClick={(fieldIndex) => this.handleWinConditionClick(conditionIndex, fieldIndex)} />
+                <BoardComponent board={this.props.settings.winConditions[conditionIndex]} onClick={(fieldIndex) => this.handleWinConditionClick(conditionIndex, fieldIndex)} />
                 <div>
                     <label htmlFor="Width">Width (between 1 and 5):</label>
                     <input
                         type="number"
                         id="widthInput"
-                        defaultValue={this.props.settings.boardDimensions.width}
+                        defaultValue={this.props.settings.boardSize.width}
                         name="width"
                         min="1"
                         max="5"
@@ -366,7 +373,7 @@ class SettingsComponent extends React.Component<SettingsProperties> {
                     <input
                         type="number"
                         id="heightInput"
-                        defaultValue={this.props.settings.boardDimensions.height}
+                        defaultValue={this.props.settings.boardSize.height}
                         name="height"
                         min="1"
                         max="5"
@@ -374,7 +381,7 @@ class SettingsComponent extends React.Component<SettingsProperties> {
                     &nbsp;
                     <button onClick={() => this.eraseWinCondition(conditionIndex)}>X</button>
                 </div>
-            </div>);
+            </div >);
     }
 
     render() {
@@ -388,41 +395,38 @@ class SettingsComponent extends React.Component<SettingsProperties> {
     }
 }
 
-class GameWithSettings extends React.Component<GameSettings, GameSettings> {
-    key: number = 0;
-    constructor(props: GameSettings) {
+class GameWithSettings extends React.Component<Settings, State> {
+    constructor(props: Settings) {
         super(props);
         this.state = {
-            boardDimensions: new Dimensions(props.boardDimensions.width, props.boardDimensions.height),
-            winConditions: props.winConditions.slice()
+            settings: props,
+            gameState: new GameState(props.boardSize)
         }
+        this.handleGameStateChange = this.handleGameStateChange.bind(this);
+        this.handleSettingsChange = this.handleSettingsChange.bind(this);
     }
+
+    handleGameStateChange(newGameState : GameState) {
+        this.setState({gameState : newGameState});
+    }
+
+    handleSettingsChange(newSettings : Settings) {
+        this.setState({
+            gameState: new GameState(newSettings.boardSize), 
+            settings: newSettings
+        });
+    }
+
     render() {
         return (<>
-            <Game key={this.key} dimensions={this.state.boardDimensions} winConditionPatterns={this.state.winConditions} />
+            <Game settings={this.state.settings} gameState={this.state.gameState} onStateChange={this.handleGameStateChange}/>
             <br />
-            <SettingsComponent settings={this.state} onSettingsChanged={(newSettings: GameSettings) => { ++this.key; this.setState(newSettings); }} />
+            <SettingsComponent settings={this.state.settings} onSettingsChanged={this.handleSettingsChange} />
         </>);
     }
 }
 
 ReactDOM.render(
-    <GameWithSettings boardDimensions={dimensionsGlobal} winConditions={winConditionsGlobal} />,
+    <GameWithSettings boardSize={sizeGlobal} winConditions={winConditionsGlobal} />,
     document.getElementById('root')
 );
-
-function calculateWinner(board: BoardRepresentation, winConditionParrerns: Array<WinConditionPattern>): string | null {
-    const boardHeight = board.dimensions.height;
-    const boardWidth = board.dimensions.width;
-    for (let pattern of winConditionParrerns) {
-        for (let row = 0; row <= (boardHeight - pattern.dimensions.height); ++row) {
-            for (let col = 0; col <= (boardWidth - pattern.dimensions.width); ++col) {
-                let checkResult = pattern.checkPattern(board, row, col);
-                if (checkResult) {
-                    return checkResult;
-                }
-            }
-        }
-    }
-    return null;
-}
