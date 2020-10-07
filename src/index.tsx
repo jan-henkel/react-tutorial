@@ -187,27 +187,23 @@ class Game extends React.Component<GameProperties> {
         this.props.onStateChange(newState);
     }
 
-    render() {
-        const gameState = this.props.gameState;
-        const stepNumber = gameState.stepNumber;
-        const winner = gameState.winner;
-        const history = gameState.boardHistory;
-        const current = history[stepNumber];
-        const squares = current.squares.slice();
-        const turn = history.length;
-
-        let status = `Turn ${turn}. `;
-        if (winner) {
-            status += 'Winner: ' + winner;
+    renderStatus(gameState: GameState) {
+        let status = `Turn ${gameState.stepNumber}. `;
+        const board = gameState.boardHistory[gameState.stepNumber];
+        if (gameState.winner) {
+            status += 'Winner: ' + gameState.winner;
         }
-        else if (stepNumber === squares.length) {
+        else if (gameState.stepNumber === board.squares.length) {
             status += 'Tie'
         }
         else {
             status += 'Next player: ' + (gameState.xIsNext ? 'X' : 'O');
         }
+        return <div>{status}</div>;
+    }
 
-        const moves = history.map((step, move) => {
+    renderMoveHistory(gameState: GameState) {
+        const moves = gameState.boardHistory.map((step, move) => {
             const desc = move ?
                 'Go to move #' + move :
                 'Go to game start';
@@ -217,18 +213,24 @@ class Game extends React.Component<GameProperties> {
                 </li>
             );
         });
+        return <ul>{moves}</ul>;
+    }
+
+    render() {
+        const gameState = this.props.gameState;
+        const board = gameState.boardHistory[gameState.stepNumber];
 
         return (
             <div className="game">
                 <div className="game-board">
                     <BoardComponent
-                        board={new Board(this.props.settings.boardSize, squares)}
+                        board={board}
                         onClick={(i) => this.handleClick(i)}
                     />
                 </div>
                 <div className="game-info">
-                    <div>{status}</div>
-                    <ol>{moves}</ol>
+                    {this.renderStatus(gameState)}
+                    {this.renderMoveHistory(gameState)}
                 </div>
             </div>
         );
@@ -406,20 +408,20 @@ class GameWithSettings extends React.Component<Settings, State> {
         this.handleSettingsChange = this.handleSettingsChange.bind(this);
     }
 
-    handleGameStateChange(newGameState : GameState) {
-        this.setState({gameState : newGameState});
+    handleGameStateChange(newGameState: GameState) {
+        this.setState({ gameState: newGameState });
     }
 
-    handleSettingsChange(newSettings : Settings) {
+    handleSettingsChange(newSettings: Settings) {
         this.setState({
-            gameState: new GameState(newSettings.boardSize), 
+            gameState: new GameState(newSettings.boardSize),
             settings: newSettings
         });
     }
 
     render() {
         return (<>
-            <Game settings={this.state.settings} gameState={this.state.gameState} onStateChange={this.handleGameStateChange}/>
+            <Game settings={this.state.settings} gameState={this.state.gameState} onStateChange={this.handleGameStateChange} />
             <br />
             <SettingsComponent settings={this.state.settings} onSettingsChanged={this.handleSettingsChange} />
         </>);
