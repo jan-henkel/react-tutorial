@@ -163,12 +163,12 @@ class Game extends React.Component<GameProperties> {
         const stepNumber = gameState.stepNumber;
         const history = gameState.boardHistory.slice(0, stepNumber + 1);
         const currentBoard = history[stepNumber];
-        const squares = currentBoard.squares.slice();
-        if (gameState.winner || squares[i]) {
+        if (gameState.winner || currentBoard.squares[i]) {
             return;
         }
-        squares[i] = gameState.xIsNext ? 'X' : 'O';
-        const newBoard = new Board(this.props.settings.boardSize, squares);
+        const newBoard = new Board(
+            this.props.settings.boardSize,
+            update(currentBoard.squares, { [i]: { $set: gameState.xIsNext ? 'X' : 'O' } }));
         this.props.onStateChange({
             boardHistory: history.concat([newBoard]),
             xIsNext: !gameState.xIsNext,
