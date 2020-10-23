@@ -55,19 +55,26 @@ function matchWinConditionAtOrigin(board: Board, winCondition: Board, topLeft: P
     return entry;
 }
 
-function matchWinCondition(board: Board, winCondition: Board): string | null {
+interface VictoryData {
+    winner: string;
+    winCondition: Board;
+    origin: Point;
+}
+
+function matchWinCondition(board: Board, winCondition: Board): VictoryData | null {
     for (let y = 0; y <= (board.size.height - winCondition.size.height); ++y) {
         for (let x = 0; x <= (board.size.width - winCondition.size.width); ++x) {
-            let checkResult = matchWinConditionAtOrigin(board, winCondition, { x, y });
-            if (checkResult) {
-                return checkResult;
+            const origin = { x, y };
+            let winner = matchWinConditionAtOrigin(board, winCondition, origin);
+            if (winner) {
+                return { winner, winCondition, origin };
             }
         }
     }
     return null;
 }
 
-function calculateWinner(board: Board, winConditions: Array<Board>): string | null {
+function matchWinConditions(board: Board, winConditions: Array<Board>): VictoryData | null {
     for (let pattern of winConditions) {
         let checkResult = matchWinCondition(board, pattern);
         if (checkResult) {
@@ -80,17 +87,19 @@ function calculateWinner(board: Board, winConditions: Array<Board>): string | nu
 interface SquareProperties {
     value: string | null;
     onClick: (() => void);
+    color?: string;
 }
 
 interface BoardProperties {
     board: Board;
     onClick: (index: number) => void;
+    highlight?: { squares: Array<boolean>, color: string };
 }
 
 // function component
 function Square(props: SquareProperties) {
     return (
-        <button className="square" onClick={props.onClick}>
+        <button className="square" style={props.color ? { backgroundColor: props.color } : {}} onClick={props.onClick}>
             {props.value}
         </button>
     );
@@ -101,6 +110,7 @@ class BoardComponent extends React.Component<BoardProperties> {
         return <Square
             key={i}
             value={this.props.board.squares[i]}
+            color={this.props.highlight?.squares[i] ? this.props.highlight.color : undefined}
             onClick={() => this.props.onClick(i)}
         />;
     }
@@ -131,7 +141,7 @@ class GameState {
     }
     boardHistory: Array<Board>;
     xIsNext: boolean = true;
-    winner: string | null = null;
+    victoryData: VictoryData | null = null;
     stepNumber: number = 0;
 }
 
@@ -163,7 +173,7 @@ class Game extends React.Component<GameProperties> {
         const stepNumber = gameState.stepNumber;
         const history = gameState.boardHistory.slice(0, stepNumber + 1);
         const currentBoard = history[stepNumber];
-        if (gameState.winner || currentBoard.squares[i]) {
+        if (gameState.victoryData || currentBoard.squares[i]) {
             return;
         }
         const newBoard = new Board(
@@ -172,7 +182,7 @@ class Game extends React.Component<GameProperties> {
         this.props.onStateChange({
             boardHistory: history.concat([newBoard]),
             xIsNext: !gameState.xIsNext,
-            winner: calculateWinner(newBoard, this.props.settings.winConditions),
+            victoryData: matchWinConditions(newBoard, this.props.settings.winConditions),
             stepNumber: history.length
         });
     }
@@ -181,7 +191,7 @@ class Game extends React.Component<GameProperties> {
         const newState = update(this.props.gameState,
             {
                 stepNumber: { $set: step },
-                winner: { $set: calculateWinner(this.props.gameState.boardHistory[step], this.props.settings.winConditions) },
+                victoryData: { $set: matchWinConditions(this.props.gameState.boardHistory[step], this.props.settings.winConditions) },
                 xIsNext: { $set: (step % 2) === 0 }
             })
         this.props.onStateChange(newState);
@@ -190,16 +200,20 @@ class Game extends React.Component<GameProperties> {
     renderStatus(gameState: GameState) {
         let status = `Turn ${gameState.stepNumber}. `;
         const board = gameState.boardHistory[gameState.stepNumber];
-        if (gameState.winner) {
-            status += 'Winner: ' + gameState.winner;
+        let color = "white";
+        if (gameState.victoryData) {
+            status += 'Winner: ' + gameState.victoryData.winner;
+            color = this.getPlayerColor(gameState.victoryData.winner);
         }
         else if (gameState.stepNumber === board.squares.length) {
             status += 'Tie'
         }
         else {
-            status += 'Next player: ' + (gameState.xIsNext ? 'X' : 'O');
+            const player = (gameState.xIsNext ? 'X' : 'O');
+            status += 'Next player: ' + player;
+            color = this.getPlayerColor(player);
         }
-        return <div>{status}</div>;
+        return <div style={{ backgroundColor: color }}>{status}</div>;
     }
 
     renderMoveHistory(gameState: GameState) {
@@ -216,15 +230,39 @@ class Game extends React.Component<GameProperties> {
         return <ul>{moves}</ul>;
     }
 
+    getPlayerColor(player: string) {
+        return player === 'X' ? "#AABBFF" : "#AAFFBB";
+    }
+
+    getHighlightedSquares(victoryData: VictoryData | null) {
+        const boardSize = this.props.gameState.boardHistory[this.props.gameState.stepNumber].size;
+        const squares = Array<boolean>(area(boardSize)).fill(false);
+        if (!victoryData) {
+            return { squares, color: "" };
+        }
+        const row = (index: number) => Math.floor(index / victoryData.winCondition.size.width);
+        const col = (index: number) => index % victoryData.winCondition.size.width;
+        const origin = victoryData.origin;
+        victoryData.winCondition.squares.forEach(
+            (value, index) => {
+                squares[(origin.y + row(index)) * boardSize.width + origin.x + col(index)] = value ? true : false;
+            }
+        );
+        const color = this.getPlayerColor(victoryData.winner);
+        return { squares, color };
+    }
+
     render() {
         const gameState = this.props.gameState;
         const board = gameState.boardHistory[gameState.stepNumber];
+        const highlight = this.getHighlightedSquares(gameState.victoryData);
 
         return (
             <div className="game">
                 <div className="game-board">
                     <BoardComponent
                         board={board}
+                        highlight={highlight}
                         onClick={(i) => this.handleClick(i)}
                     />
                 </div>
@@ -357,7 +395,7 @@ class SettingsComponent extends React.Component<SettingsProperties> {
 
     renderWinCondition(conditionIndex: number) {
         return (
-            <div key={conditionIndex} >
+            <div id="winCondition" key={conditionIndex} >
                 <hr />
                 <BoardComponent board={this.props.settings.winConditions[conditionIndex]} onClick={(fieldIndex) => this.handleWinConditionClick(conditionIndex, fieldIndex)} />
                 <div>
